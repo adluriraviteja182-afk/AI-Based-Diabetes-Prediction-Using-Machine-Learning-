@@ -1,6 +1,6 @@
 # 🏥 AI-Based Diabetes Prediction System
 
-## Minor Project - Machine Learning Application
+## Machine Learning Application
 
 A complete web-based application for predicting diabetes risk using Machine Learning and Streamlit.
 
