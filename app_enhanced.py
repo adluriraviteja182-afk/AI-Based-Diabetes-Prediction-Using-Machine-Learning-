@@ -891,13 +891,13 @@ def main_app(lang='en'):
 
 def main():
     """Main application entry point"""
-    # Initialize session state FIRST - before anything else
+    # ⚠️ CRITICAL: Initialize session state FIRST - before ANY other code
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
     if 'username' not in st.session_state:
         st.session_state['username'] = None
     if 'language' not in st.session_state:
-        st.session_state['language'] = 'en'  # ← Initialize BEFORE sidebar
+        st.session_state['language'] = 'en'
     
     # Language selector in sidebar
     with st.sidebar:
@@ -925,3 +925,7 @@ def main():
         login_page(lang)
     else:
         main_app(lang)
+
+
+if __name__ == "__main__":
+    main()
