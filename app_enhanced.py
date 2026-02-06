@@ -18,6 +18,9 @@ from datetime import datetime
 import json
 import os
 import hashlib
+import json
+import os
+from datetime import datetime
 
 # Page configuration
 st.set_page_config(
@@ -219,37 +222,89 @@ st.markdown("""
         border-radius: 10px;
         padding: 15px;
     }
-    </style>
-""", unsafe_allow_html=True)
-
-def load_users():
-    """Load user database"""
-    if os.path.exists(USER_DB_FILE):
-        with open(USER_DB_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    """Save user database"""
-    with open(USER_DB_FILE, 'w') as f:
-        json.dump(users, f)
-
 def load_history():
-    """Load prediction history"""
-    if os.path.exists(HISTORY_DB_FILE):
-        with open(HISTORY_DB_FILE, 'r') as f:
-            return json.load(f)
-    return {}
+    """Load prediction history from file"""
+    if not os.path.exists(HISTORY_DB_FILE):  # ← Changed from HISTORY_FILE
+        return {}
+    
+    try:
+        with open(HISTORY_DB_FILE, 'r') as f:  # ← Changed from HISTORY_FILE
+            content = f.read().strip()
+            if not content:
+                return {}
+            data = json.loads(content)
+            if isinstance(data, dict):
+                return data
+            else:
+                backup_file = f"{HISTORY_DB_FILE}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # ← Changed
+                os.rename(HISTORY_DB_FILE, backup_file)  # ← Changed
+                print(f"Old format backed up to: {backup_file}")
+                return {}
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        backup_file = f"{HISTORY_DB_FILE}.corrupt.{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # ← Changed
+        try:
+            os.rename(HISTORY_DB_FILE, backup_file)  # ← Changed
+            print(f"Corrupted file backed up to: {backup_file}")
+        except Exception as backup_error:
+            print(f"Could not backup: {backup_error}")
+        return {}
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
 
 def save_history(history):
     """Save prediction history"""
-    with open(HISTORY_DB_FILE, 'w') as f:
-        json.dump(history, f)
+    try:
+        # Validate data before saving
+        json.dumps(history)
+        
+        with open(HISTORY_DB_FILE, 'w') as f:
+            json.dump(history, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving history: {e}")
+        return False
 
-def hash_password(password):
-    """Hash password for security"""
-    return hashlib.sha256(password.encode()).hexdigest()
 
+def add_prediction_to_history(username, prediction_data):
+    """Add prediction to user's history"""
+    try:
+        history = load_history()
+        
+        if username not in history:
+            history[username] = []
+        
+        history[username].append({
+            'date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'data': prediction_data
+        })
+        
+        # Keep only last 50 predictions per user
+        if len(history[username]) > 50:
+            history[username] = history[username][-50:]
+        
+        save_history(history)
+        return True
+        
+    except Exception as e:
+        print(f"Error adding prediction to history: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def get_user_history(username):
+    """Get user's prediction history"""
+    try:
+        history = load_history()
+        return history.get(username, [])
+    except Exception as e:
+        print(f"Error getting user history: {e}")
+        return []
 def authenticate(username, password):
     """Authenticate user"""
     users = load_users()
